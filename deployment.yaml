@@ -1,0 +1,53 @@
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-demo
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-demo-app-svc
+  namespace: k8s-demo
+spec:
+  type: NodePort
+  selector:
+    app: k8s-demo-app
+  ports:
+  - protocol: "TCP"
+    port:  8080 # Service 외부에서 접근하는 포트
+    targetPort: 8080 # Service가 연결할 Pod의 컨테이너 포트
+---
+# Deployment (Replicaset + Pods)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # namespace: k8s-demo # k8s 리소스가 속하는 namespace 지정
+  name: k8s-demo-app-deployment # k8s 리소스의 고유한 이름
+  namespace: k8s-demo
+spec:
+  selector:
+    matchLabels:
+      app: k8s-demo-app # selector.matchLabels와 metadata.labels가 일치해야 함
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: k8s-demo-app # Pod의 label (selector.matchLabels와 일치해야 함)
+    spec:
+      containers:
+      - name: k8s-demo-app
+        image: k8s-demo-app
+        imagePullPolicy: Never # 로컬 이미지 사용
+        resources:
+          limits: # 리소스 제한
+            memory: 512Mi # 컨테이너가 사용할 수 있는 최대 메모리 -> 넘기면 OOM 발생
+            cpu: "1" # 컨테이너가 사용할 수 있는 최대 vCPU
+          requests:
+            memory: 256Mi # 컨테이너가 사용할 최소 메모리 요청
+            cpu: "0.5" # 컨테이너가 사용할 최소 vCPU 요청
+        ports:
+          - name: k8s-demo-app
+            containerPort: 8080
