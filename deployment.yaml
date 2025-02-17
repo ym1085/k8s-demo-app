@@ -5,6 +5,28 @@ kind: Namespace
 metadata:
   name: k8s-demo
 ---
+# https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k8s-demo-app-ingress
+  namespace: k8s-demo
+  annotations:
+    kubernetes.io/ingress.class: 'k8s-demo-app-nginx'
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: k8s.demo.app
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: k8s-demo-app-svc
+            port:
+              number: 8080
+---
 # Service
 apiVersion: v1
 kind: Service
@@ -16,9 +38,10 @@ spec:
   selector:
     app: k8s-demo-app
   ports:
-  - protocol: "TCP"
-    port:  8080 # Service 외부에서 접근하는 포트
-    targetPort: 8080 # Service가 연결할 Pod의 컨테이너 포트
+    - name: http
+      protocol: "TCP"
+      port: 8080 # Service 외부에서 접근하는 포트
+      targetPort: 8080 # Service가 연결할 Pod의 컨테이너 포트
 ---
 # Deployment (Replicaset + Pods)
 apiVersion: apps/v1
@@ -31,23 +54,23 @@ spec:
   selector:
     matchLabels:
       app: k8s-demo-app # selector.matchLabels와 metadata.labels가 일치해야 함
-  replicas: 2
+  replicas: 3 # replica는 3개
   template:
     metadata:
       labels:
         app: k8s-demo-app # Pod의 label (selector.matchLabels와 일치해야 함)
     spec:
       containers:
-      - name: k8s-demo-app
-        image: k8s-demo-app
-        imagePullPolicy: Never # 로컬 이미지 사용
-        resources:
-          limits: # 리소스 제한
-            memory: 512Mi # 컨테이너가 사용할 수 있는 최대 메모리 -> 넘기면 OOM 발생
-            cpu: "1" # 컨테이너가 사용할 수 있는 최대 vCPU
-          requests:
-            memory: 256Mi # 컨테이너가 사용할 최소 메모리 요청
-            cpu: "0.5" # 컨테이너가 사용할 최소 vCPU 요청
-        ports:
-          - name: k8s-demo-app
-            containerPort: 8080
+        - name: k8s-demo-app
+          image: k8s-demo-app
+          imagePullPolicy: Never # 로컬 이미지 사용
+          resources:
+            limits: # 리소스 제한
+              memory: 512Mi # 컨테이너가 사용할 수 있는 최대 메모리 -> 넘기면 OOM 발생
+              cpu: "1" # 컨테이너가 사용할 수 있는 최대 vCPU
+            requests:
+              memory: 256Mi # 컨테이너가 사용할 최소 메모리 요청
+              cpu: "0.5" # 컨테이너가 사용할 최소 vCPU 요청
+          ports:
+            - name: k8s-demo-app
+              containerPort: 8080
